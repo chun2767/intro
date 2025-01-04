@@ -3,79 +3,212 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>John Doe's Personal Homepage</title>
+    <title>Weather Checker</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #f4f4f9;
-            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #e0f7fa;
+            color: #01579b;
         }
-        header {
-            background-color: #4CAF50;
-            color: white;
-            padding: 1rem 0;
+        #weatherApp {
             text-align: center;
-        }
-        main {
+            background-color: #ffffff;
             padding: 2rem;
-            max-width: 800px;
-            margin: auto;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            width: 90%;
+            max-width: 400px;
         }
-        section {
-            margin-bottom: 2rem;
+        h1 {
+            color: #0277bd;
+            margin-bottom: 1rem;
         }
-        h1, h2 {
-            color: #4CAF50;
+        #cityInput {
+            padding: 0.7rem;
+            width: 100%;
+            margin-bottom: 1rem;
+            border: 1px solid #81d4fa;
+            border-radius: 8px;
         }
-        footer {
-            text-align: center;
-            padding: 1rem 0;
-            background-color: #333;
+        #cityInput:focus {
+            outline: none;
+            border-color: #0288d1;
+            box-shadow: 0 0 4px #0288d1;
+        }
+        #getWeather {
+            padding: 0.7rem;
+            background-color: #0288d1;
             color: white;
-            margin-top: 2rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        #getWeather:hover {
+            background-color: #0277bd;
+        }
+        #weatherDisplay {
+            margin-top: 1rem;
+            text-align: left;
+            line-height: 1.8;
+        }
+        .bar {
+            position: relative;
+            width: 100%;
+            height: 20px;
+            background: #e0f7fa;
+            border-radius: 10px;
+            margin: 1rem 0;
+            border: 1px solid #0288d1;
+        }
+        .bar .fill {
+            height: 100%;
+            background-color: #0288d1;
+            border-radius: 10px;
+        }
+        .bar .marks {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+        .bar .marks div {
+            position: absolute;
+            top: 0;
+            height: 100%;
+        }
+        .bar .marks div:nth-child(5n) {
+            width: 3px;
+            background: #0277bd;
+        }
+        .bar .marks div:not(:nth-child(5n)) {
+            width: 1px;
+            background: #81d4fa;
+        }
+        .bar .label {
+            position: absolute;
+            top: 35px;
+            font-size: 0.8rem;
+            color: #01579b;
+        }
+        .windArrow {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 1rem 0;
+        }
+        .windArrow span {
+            transform-origin: center;
+            font-size: 1.5rem;
+            color: #0277bd;
+        }
+        .divider {
+            margin: 1rem 0;
+            border-bottom: 1px solid #0288d1;
+        }
+        .sunrise-sunset {
+            display: flex;
+            justify-content: space-evenly;
+            align-items: center;
+            margin-top: 1rem;
+        }
+        .sunrise-sunset div {
+            text-align: center;
+        }
+        .sunrise-sunset img {
+            width: 50px;
+            height: 50px;
+            margin-bottom: 0.5rem;
+        }
+        #map {
+            width: 100%;
+            height: 200px;
+            margin-top: 1rem;
+            border-radius: 10px;
         }
     </style>
+    <script>
+        async function fetchWeather() {
+            const apiKey = "f9d6ef6df5f20e3b3a8def838dd4df16";
+            const city = document.getElementById('cityInput').value;
+            const weatherDisplay = document.getElementById('weatherDisplay');
+
+            if (!city) {
+                weatherDisplay.innerHTML = "<p>도시 이름을 입력하세요 (Enter a city name).</p>";
+                return;
+            }
+
+            const apiUrl = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`;
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) {
+                    throw new Error("도시를 찾을 수 없습니다 (City not found)");
+                }
+                const data = await response.json();
+                const { name, main, weather, wind, sys, coord } = data;
+                const sunrise = new Date(sys.sunrise * 1000).toLocaleTimeString();
+                const sunset = new Date(sys.sunset * 1000).toLocaleTimeString();
+
+                const tempPercent = Math.max(0, Math.min(100, ((main.temp + 20) / 60) * 100));
+                const feelsLikePercent = Math.max(0, Math.min(100, ((main.feels_like + 20) / 60) * 100));
+
+                const marks = Array.from({ length: 61 }, (_, i) => 
+                    `<div style="left: ${i * (100 / 60)}%;"></div>`
+                ).join('');
+                const labels = Array.from({ length: 13 }, (_, i) => 
+                    `<div class="label" style="left: ${(i * 8.3) - 1.5}%">${-20 + i * 5}°C</div>`
+                ).join('');
+
+                weatherDisplay.innerHTML = `
+                    <p><strong>도시 이름 (City):</strong> ${name}</p>
+                    <div class="bar">
+                        <div class="fill" style="width: ${tempPercent}%;"></div>
+                        <div class="marks">${marks}</div>
+                        ${labels}
+                    </div>
+                    <p>온도 (Temp): ${main.temp}°C</p>
+                    <div class="bar">
+                        <div class="fill" style="width: ${feelsLikePercent}%; background-color: #0277bd;"></div>
+                        <div class="marks">${marks}</div>
+                        ${labels}
+                    </div>
+                    <p>체감 온도 (Feels Like): ${main.feels_like}°C</p>
+                    <p><strong>습도 (Humidity):</strong> ${main.humidity}%</p>
+                    <p><strong>날씨 상태 (Condition):</strong> ${weather[0].description}</p>
+                    <div class="windArrow">
+                        <span style="display: inline-block; transform: rotate(${wind.deg}deg);">⬆️</span>
+                    </div>
+                    <div class="divider"></div>
+                    <div class="sunrise-sunset">
+                        <div>
+                            <img src="https://cdn-icons-png.flaticon.com/512/869/869869.png" alt="sunrise">
+                            <p><strong>일출 (Sunrise):</strong><br>${sunrise}</p>
+                        </div>
+                        <div>
+                            <img src="https://cdn-icons-png.flaticon.com/512/4375/4375158.png" alt="sunset">
+                            <p><strong>일몰 (Sunset):</strong><br>${sunset}</p>
+                        </div>
+                    </div>
+                    <p><strong>관측 좌표 (Observation Coordinates):</strong> 위도 (Latitude) ${coord.lat}, 경도 (Longitude) ${coord.lon}</p>
+                    <iframe id="map" src="https://www.google.com/maps?q=${coord.lat},${coord.lon}&output=embed"></iframe>
+                `;
+            } catch (error) {
+                weatherDisplay.innerHTML = `<p>Error: ${error.message}</p>`;
+            }
+        }
+    </script>
 </head>
 <body>
-    <header>
-        <h1>Welcome to John Doe's Homepage</h1>
-    </header>
-    <main>
-        <section id="about">
-            <h2>About Me</h2>
-            <p>Hello! My name is John Doe. I am a web developer with a passion for creating dynamic and user-friendly websites.
-            I love hiking, photography, and exploring new technologies.</p>
-        </section>
-        <section id="projects">
-            <h2>My Projects</h2>
-            <p>Here are some of the projects I've worked on:</p>
-            <ul>
-                <li><strong>Personal Portfolio:</strong> A showcase of my web development work, featuring responsive design and interactive elements.</li>
-                <li><strong>Blog Platform:</strong> A CMS-powered blog where users can create and share posts on various topics.</li>
-                <li><strong>Weather App:</strong> A real-time weather application using API integration and geolocation features.</li>
-            </ul>
-        </section>
-        <section id="videos">
-            <h2>My Videos</h2>
-            <p>Check out some of my favorite YouTube videos:</p>
-            <div>
-                <iframe width="560" height="315" src="https://www.youtube.com/embed/a_80o2lDYec" title="Essential YouTube Video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-            </div>
-        </section>
-        <section id="contact">
-            <h2>Contact Me</h2>
-            <p>You can reach me at:</p>
-            <ul>
-                <li>Email: <a href="mailto:john.doe@example.com">john.doe@example.com</a></li>
-                <li>Phone: +1-234-567-8900</li>
-                <li>LinkedIn: <a href="https://linkedin.com/in/johndoe" target="_blank">John Doe's LinkedIn Profile</a></li>
-            </ul>
-        </section>
-    </main>
-    <footer>
-        <p>&copy; 2025 John Doe. All rights reserved.</p>
-    </footer>
+    <div id="weatherApp">
+        <h1>날씨 확인기 (Weather Checker)</h1>
+        <input type="text" id="cityInput" placeholder="도시 이름을 입력하세요 (Enter city name)">
+        <button id="getWeather" onclick="fetchWeather()">검색 (Search)</button>
+        <div id="weatherDisplay"></div>
+    </div>
 </body>
 </html>
